@@ -169,18 +169,6 @@ apt install -y \
     libboost-all-dev \
     zlib1g-dev
 
-# Install runtime dependencies that might be needed by compiled binaries
-apt install -y \
-    libstdc++6 \
-    libgcc-s1 \
-    libssl3 \
-    libcrypto3 \
-    zlib1g \
-    libboost-system1.74.0 \
-    libboost-filesystem1.74.0 \
-    libboost-thread1.74.0 \
-    libboost-program-options1.74.0
-
 # Update library cache
 ldconfig
 
