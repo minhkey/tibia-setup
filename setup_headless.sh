@@ -2,7 +2,7 @@
 # Automated Tibia 7.7 Server Setup Script for Headless Debian 13
 # This script downloads, compiles, and configures a complete Tibia 7.7 server
 # Downloads demonax branch for tibia-game repository
-# Usage: sudo ./setup_headless_demonax.sh
+# Usage: sudo ./setup_headless.sh
 
 set -e  # Exit on error
 set -u  # Exit on undefined variable
@@ -166,8 +166,15 @@ apt install -y \
     ufw \
     systemd \
     pkg-config \
-    zlib1g-dev
+    zlib1g-dev \
+    libboost-all-dev \
+    libstdc++6 \
+    libgcc-s1 \
+    libssl3 \
+    libcrypto3 \
+    zlib1g
 
+ldconfig
 echo "✓ Dependencies installed"
 
 # =============================================================================
@@ -219,6 +226,21 @@ if ! make -j$(nproc); then
     exit 1
 fi
 verify_file "build/querymanager"
+file build/querymanager
+
+# Test the binary for library dependencies
+echo "Testing compiled binary..."
+if ! ldd build/querymanager 2>&1 | grep -q "not found"; then
+    echo "✓ Binary has all library dependencies"
+else
+    echo "Warning: Binary has missing library dependencies:"
+    ldd build/querymanager 2>&1 | grep "not found"
+    echo "Attempting to install missing runtime libraries..."
+    # Try to install common missing libraries
+    apt install -y libstdc++6 libgcc-s1 libssl3 libcrypto3 zlib1g
+    ldconfig
+fi
+
 install -m 755 build/querymanager "$INSTALL_DIR/querymanager/querymanager"
 verify_file "$INSTALL_DIR/querymanager/querymanager"
 echo "✓ Query Manager compiled and installed"
@@ -229,13 +251,15 @@ cd "$TEMP_BUILD_DIR/tibia-game"
 make clean > /dev/null 2>&1 || true
 if ! make -j$(nproc); then
     echo "Error: Game Server compilation failed"
-    echo "Checking for missing dependencies..."
+    echo "Installing additional development libraries..."
+    apt install -y libboost-all-dev zlib1g-dev libssl-dev
     if ! make -j$(nproc); then
         echo "Game Server compilation failed even with additional dependencies"
         exit 1
     fi
 fi
 verify_file "build/game"
+file build/game
 
 # Test the binary for library dependencies
 echo "Testing compiled binary..."
@@ -244,7 +268,10 @@ if ! ldd build/game 2>&1 | grep -q "not found"; then
 else
     echo "Warning: Binary has missing library dependencies:"
     ldd build/game 2>&1 | grep "not found"
-    exit 1
+    echo "Attempting to install missing runtime libraries..."
+    # Try to install common missing libraries
+    apt install -y libstdc++6 libgcc-s1 libssl3 libcrypto3 zlib1g libboost-system1.74.0 libboost-filesystem1.74.0 libboost-thread1.74.0 libboost-program-options1.74.0
+    ldconfig
 fi
 
 install -m 755 build/game "$INSTALL_DIR/game/bin/game"
@@ -276,6 +303,21 @@ if ! make -j$(nproc); then
     exit 1
 fi
 verify_file "build/login"
+file build/login
+
+# Test the binary for library dependencies
+echo "Testing compiled binary..."
+if ! ldd build/login 2>&1 | grep -q "not found"; then
+    echo "✓ Binary has all library dependencies"
+else
+    echo "Warning: Binary has missing library dependencies:"
+    ldd build/login 2>&1 | grep "not found"
+    echo "Attempting to install missing runtime libraries..."
+    # Try to install common missing libraries
+    apt install -y libstdc++6 libgcc-s1 libssl3 libcrypto3 zlib1g
+    ldconfig
+fi
+
 install -m 755 build/login "$INSTALL_DIR/login/login"
 verify_file "$INSTALL_DIR/login/login"
 echo "✓ Login Server compiled and installed"
